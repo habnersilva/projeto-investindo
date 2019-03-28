@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
-use Prettus\Validator\Contracts\ValidatorInterface;
-use Prettus\Validator\Exceptions\ValidatorException;
 use App\Http\Requests\UserCreateRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Repositories\UserRepository;
-use App\Validators\UserValidator;
+use App\Services\UserService;
+
 
 /**
  * Class UsersController.
@@ -21,15 +20,15 @@ class UsersController extends Controller
 {
 
     protected $repository;
-    protected $validator;
+    protected $service;
+    
 
-
-
-
-    public function __construct(UserRepository $repository, UserValidator $validator)
+    public function __construct(UserRepository $repository, UserService $service)
     {
-        $this->repository = $repository;
-        $this->validator  = $validator;
+
+        $this->repository = $repository;        
+        $this->service    = $service;
+
     }
 
 
@@ -44,45 +43,20 @@ class UsersController extends Controller
 
 
 
-    
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  UserCreateRequest $request
-     *
-     * @return \Illuminate\Http\Response
-     *
-     * @throws \Prettus\Validator\Exceptions\ValidatorException
-     */
     public function store(UserCreateRequest $request)
     {
-        try {
+       
+        $request = $this->service->store($request->all());
 
-            $this->validator->with($request->all())->passesOrFail(ValidatorInterface::RULE_CREATE);
+        if($request['success'])
+            $usuario = $request['data'];
 
-            $user = $this->repository->create($request->all());
+        $usuario = null;
 
-            $response = [
-                'message' => 'User created.',
-                'data'    => $user->toArray(),
-            ];
+        return view('user.index', [
+            'usuario' => $usuario
+        ]);
 
-            if ($request->wantsJson()) {
-
-                return response()->json($response);
-            }
-
-            return redirect()->back()->with('message', $response['message']);
-        } catch (ValidatorException $e) {
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'error'   => true,
-                    'message' => $e->getMessageBag()
-                ]);
-            }
-
-            return redirect()->back()->withErrors($e->getMessageBag())->withInput();
-        }
     }
 
     /**
