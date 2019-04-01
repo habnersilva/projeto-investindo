@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
+use Prettus\Validator\Contracts\ValidatorInterface;
+use Prettus\Validator\Exceptions\ValidatorException;
 use App\Http\Requests\UserCreateRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Repositories\UserRepository;
+use App\Validators\UserValidator;
 use App\Services\UserService;
 
 
@@ -23,11 +26,11 @@ class UsersController extends Controller
     protected $service;
     
 
-    public function __construct(UserRepository $repository, UserService $service)
+    public function __construct(UserRepository $repository, UserService $service, UserValidator $validator)
     {
 
         $this->repository = $repository;        
-        $this->service    = $service;
+        $this->service    = $service;        
 
     }
 
@@ -37,7 +40,11 @@ class UsersController extends Controller
     public function index()
     {
 
-        return view('user.index');
+        $users = $this->repository->all();
+
+        return view('user.index', [
+            'users' => $users
+        ]);
 
     }
 
@@ -47,11 +54,13 @@ class UsersController extends Controller
     {
        
         $request = $this->service->store($request->all());
-
-        if($request['success'])
-            $usuario = $request['data'];
-
-        $usuario = null;
+        
+        $usuario = $request['success'] ? $request['data'] : null; 
+        
+        session()->flash('success', [
+            'success'  => $request['success'],
+            'messages' => $request['messages']
+        ]);
 
         return view('user.index', [
             'usuario' => $usuario
